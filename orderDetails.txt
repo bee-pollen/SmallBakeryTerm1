@@ -1,0 +1,4 @@
+20230514-003~lily, pine 2 sreet~98.89999999999998~0~15.0~MRB~Matcha Red Bean~4.3~7~RJ~Roti John~3.8~6~GCC~Garlic Cream Cheese~4.3~8~SB~Sausage Bun~2.9~4
+20230514-004~reay, Pine 5 street~50.2~0~15.0~CW~Coconut Wheel~3.7~6~SM~Sesame Mochi~4.0~7
+20230525-005~mr lee, SIM~82.6~0~10.0~CW~Coconut Wheel~3.7~20~SS~Strawberry Snail~4.3~2
+20230525-006~yj, sim~29.6~5.0~0.0~CW~Coconut Wheel~3.7~8
