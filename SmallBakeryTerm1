@@ -1,0 +1,662 @@
+def loadOrderList(orderListFile):
+  ''' Creates/extracts an Order List from a file'''
+  orderList = {}
+  #extracts information from file in read only mode
+  with open(orderListFile, "r") as f:
+    for line in f:
+      #strip to remove space/whitespace and split two inputs indicated by ","
+      fields = line.strip().split("~")
+      orderId = fields[0]
+      orderList[orderId] = {
+              "date": fields[1],
+              "orderNum": fields[2],
+              "deliveryAddress": fields[3],
+              "paymentStatus": fields[4],
+              "orderStatus": fields[5],
+              "totalPayment": float(fields[6]),
+              "paymentRef": fields[7]
+            }
+  return orderList
+
+def userOption():
+  ''' Asks user which option they want to enter'''
+  print("\n       Select Option")
+  print("1. Inventory Management")
+  print("2. Sales Management")
+  print("3. Discounts setup")
+  print("0. Quit")
+  option = int(input("Enter your option : "))
+  return option
+
+def updateProductFile(menu):
+  ''' Updates the product.txt file'''
+  #opens the file in write mode
+  with open('product.txt', 'w') as f:
+      #rewrites the file
+      for code, value in menu.items():
+        f.write(code + ',' + value["name"]+ ',' + str(value["price"]) + ',' + value["availability"] + '\n')
+
+def updateOrderList(orderList):
+    with open("orderList.txt", "w") as file:
+        for orderId, orderInfo in orderList.items():
+            orderData = "~".join([
+                orderId,
+                orderInfo["date"],
+                orderInfo["orderNum"],
+                orderInfo["deliveryAddress"],
+                orderInfo["paymentStatus"],
+                orderInfo["orderStatus"],
+                str(orderInfo["totalPayment"]),
+                orderInfo["paymentRef"]
+            ])
+            file.write(orderData + "\n") 
+
+def calculateDiscount(subtotal):
+    # Read discount information from file
+    with open("discount.txt", "r") as f:
+        discountInfo = [line.strip().split() for line in f.readlines()]
+
+
+    # Determine discount percentage based on subtotal
+    discountPercent = 0
+    for threshold, percent in discountInfo[1:]:
+        if subtotal > float(threshold):
+          if float(discountPercent) > float(percent):
+            break
+          discountPercent = float(percent)
+  
+    
+    # Calculate discount and total amount
+    discountAmount = subtotal * discountPercent / 100
+    
+
+    # Return discount amount and total amount
+    return (discountAmount)
+
+def main():
+  #try:
+    
+    menu = loadMenu('product.txt')
+    orderList = loadOrderList('orderList.txt')
+    print('.......Running program.......')
+
+    option = 100
+    while option != 0:
+      option = userOption()
+      if option == 0:
+        break
+      elif option == 1:
+        inventoryManagement(menu)
+      elif option == 2:
+        salesManagement(orderList, menu)
+      elif option == 3:
+        discountsSetup()
+      else:
+        print("Please enter valid input!")
+
+  #except:
+    print("\nerror : invalid input detected \nPlease rerun the program")
+    
+def inventoryManagement(menu):
+  print("\nYou are now in the 'Inventory Management' directory \n")
+  option = 100
+  while option != 0:
+   print('~' * 45)
+   print("\n   Inventory Management Menu")
+   print("1. Bread and Pastry List")
+   print("2. Setup New Pastry")
+   print("3. update pastry")
+   print("4. re-load pastry from file")
+   print("0. Quit Inventory Management")
+   option = int(input("Enter your option : "))
+   print('~' * 45)
+  
+   if option == 0:
+     print("Quitting Inventory management")
+   elif option == 1:
+     menuList(menu)
+   elif option == 2:
+     setupNewPastry(menu)
+   elif option == 3:
+     updatePastry(menu)
+   elif option == 4:
+     print("re-load pastry from file")
+     fileName = input("Please Enter File Name : ")
+     loadMenu(fileName)
+   else:
+     print("Please enter valid input!")
+
+def setupNewPastry(menu):
+    """ insert new data into dictionary """
+  
+    print("You are now in the 'Sales Management' directory \n")
+    # Ask for input of pastry name, code, and price
+    print("\nSetup New Pastry\n")
+    code = str(input("Enter pastry code: "))
+    code = code.upper()
+    name = str(input("Enter pastry name: "))
+    name = name.title()
+    price = float(input("Enter pastry price: "))
+    
+    # Check if pastry code already exists in menu
+    if code in menu:
+        print("Unable to input, a pastry code under", code, "is already in the Menu")
+        print("Pastry information:", menu[code])
+    else:
+        # Add new pastry to menu dictionary
+        menu[code] = { 'name' : name,
+                      'price' : price,
+                      'availability' : 'Available'
+                         }
+      
+        updateProductFile(menu)
+        print("Successfully inserted new pastry:")
+        menuList(menu) 
+
+def menuList(menu):
+  '''
+  Creates and display the subs menu in dictiomary
+  '''
+  if bool(menu):
+    print("\nBread & Pastry List\n")
+    print('{:<5} {:<20} {:<6} {:<10}'.format('Code', 'Name', 'Price', 'Availability'))
+    print('-' * 45)
+    for code, item in menu.items():
+        print('{:<5} {:<20} {:<6.2f} {:<10}'.format(code, item['name'], item['price'], item['availability']))
+  else:
+    print("Menu is empty")
+    return
+    
+def updatePastry(menu):
+    print("update pastry")
+    itemCode = input("Enter item code to update: ")
+    if itemCode not in menu:
+        print("Error: Item not found")
+        return
+    
+    item = menu[itemCode]
+    print(f"Item: {item['name']}\nPrice: {item['price']}\nAvailability: {item['availability']}")
+    newPrice = input("Enter new price (press enter to skip): ")
+    if newPrice:
+      item['price'] = float(newPrice)
+      updateProductFile(menu)
+    
+    newAvailability = input("Enter new availability (Available/Unavailable, press enter to skip): ")
+    if newAvailability:
+      item['availability'] = newAvailability
+      updateProductFile(menu)
+      
+    print(f"{item['name']} updated successfully!\nPrice: {item['price']}\nAvailability: {item['availability']}")
+
+def loadMenu(productFile):
+  menu = {}
+# open the file for reading
+  with open(productFile, 'r') as file:
+    # iterate over each line in the file
+      for line in file:
+        # split the line into its components
+          code, name, price, availability = line.strip().split(',')
+        # convert price to float
+          price = float(price)
+        # add the item to the dictionary
+          menu[code] = {'name': name, 'price': price, 'availability': availability}
+  return menu
+  
+#INVENYTORY
+
+#SALES
+def salesManagement(orderList, menu):
+  option = 100
+  print("\nYou are now in the Sales Management Menu\n")
+  while option != 0:
+   print('~' * 45)
+   print("\n   Sales Management Menu")
+   print("1. Create order")
+   print("2. Cancel order")
+   print("3. Update order payment")
+   print("4. Update order status")
+   print("5. List orders (today)")
+   print("6. List order details")
+   print("0. Quit Sales Management")
+   option = int(input("Enter your option : "))
+  
+   if option == 0:
+     print("Quitting sales management")
+   elif option == 1:
+     makeOrder(menu, orderList)
+   elif option == 2:
+     cancelOrder(orderList)
+   elif option == 3:
+     paymentStatus(orderList)
+   elif option == 4:
+     orderStatus(orderList)
+   elif option == 5:
+     todayOrderList(orderList)
+   elif option == 6:  
+     listOrderDetails()
+   else:
+     print("Please enter valid input!")
+
+def makeOrder(menu, orderList):
+    print("\nCreate an order")
+    ordered = {}
+    subtotal = 0
+    menuList(menu)
+  
+    while True:
+      code = input("Enter item and quantity (format: code,quantity | X for stop): ")
+      code = code.upper()
+      if code == "X":
+        break
+      
+      code, quantity = code.split(",")
+      code = code.strip()
+      quantity = quantity.strip()
+      quantity = int(quantity)
+
+      print(code, quantity)
+      if code not in menu:
+        print("Invalid item code!")
+        continue
+        
+      name = menu[code]["name"]
+      price = menu[code]["price"]
+      availability = menu[code]["availability"]
+        
+      if availability != "Available":
+        print(f"{name} is not available!")
+        continue
+
+      if code.upper() in ordered:
+        ordered[code]["quantity"] += quantity
+      else:
+        ordered[code] = {"name": name, "price": float(price), "quantity": quantity}
+        
+      subtotal += ordered[code]["price"] * quantity
+    
+    freeIf, deliveryFee = changeDeliveryfee()
+    if subtotal > freeIf:
+        deliveryFee = 0
+  
+    
+    discount = calculateDiscount(subtotal)
+    if subtotal > 0:
+      discountpct = discount/subtotal * 100
+    else:
+      discountpct = 0
+    
+    
+    totalDue = subtotal + deliveryFee - discount
+
+    print('{:<20} {:<6} {:<6} {:<6}'.format('Item', 'Price', 'Qty', 'Amount'))
+    print('-'*45)
+    details ={}
+    for code, info in ordered.items():
+        name = info["name"]
+        price = info["price"]
+        quantity = info["quantity"]
+        amount = price * quantity
+        details[code] = [name, price, quantity]
+        print('{:<20} ${:<6.2f} {:<6} ${:<6.2f}'.format(name, price, quantity, amount))
+    
+    print('\n{:>18} : ${:<6.2f}'.format("Subtotal", subtotal))
+    
+    if deliveryFee == 0:
+      print('{:>18} : {:<6}'.format("Delivery", "free"))
+    else:
+      print('{:>18} : ${:<6.2f}'.format("Delivery", deliveryFee))
+    if discountpct > 0:
+      print('{:>18} : {:<6.2f}%'.format("Discount", discountpct))
+    print('{:>18} : ${:<6.2f}'.format("Total Due", totalDue))
+    orderDetails = {}
+  
+    import datetime
+    while True:
+        confirm = input("\nProcced to order (y/n): ")
+        if confirm.lower() == "n":
+            return
+        name = input("\nEnter the name for this order : ")
+        name = name.strip()
+        address = input("Enter the delivery address for this order : ")
+        address = address.strip()
+        nameAddress = name + ", " + address
+        orderNum = f"{len(orderList) + 1:03}"
+        orderId = f"{datetime.datetime.now().strftime('%Y%m%d')}-{orderNum}"
+        order = {
+            "date": datetime.datetime.now().strftime('%Y-%m-%d'),
+            "orderNum": orderNum,
+            "deliveryAddress": nameAddress,
+            "paymentStatus": "Pending",
+            "orderStatus": "New",
+            "totalPayment": totalDue,
+            "paymentRef": "None"
+        }
+        orderDetails[orderId] = details
+      
+        with open('orderDetails.txt', 'a') as file:
+         file.write(f"\n{orderId}~{nameAddress}~{subtotal}~{deliveryFee}~{discountpct}")
+         for code, info in orderDetails[orderId].items():
+           file.write(f"~{code}~{info[0]}~{info[1]}~{info[2]}")
+  
+        orderList[orderId] = order
+        updateOrderList(orderList)
+        print(f"Order created and Order ID is {orderId}")
+        return
+ 
+def cancelOrder(orderList):
+    print("Cancel an order")
+    orderId = input("Enter the order ID to cancel: ")
+    
+    if orderId not in orderList:
+        print("Error: Order not found.")
+        return
+    
+    order = orderList[orderId]
+    if order['orderStatus'] == 'Baking' or order['orderStatus'] == 'Completed':
+        print("Error: Order cannot be cancelled because it is already in the '%s' status." % order['orderStatus'])
+        return
+    
+    order['orderStatus'] = 'Cancelled'
+    print("Order %s has been cancelled." % orderId)
+    updateOrderList(orderList)
+
+def paymentStatus(orderList):
+  print("Update an order's payment")
+
+  print("You are now in the 'update payment status' directory")
+  orderId = input("Please input the order Id : ")
+  
+  order = orderList.get(orderId)
+  if order is None:
+     print("Error: No order found with ID", orderId)
+     return
+  elif order["paymentStatus"] == "Received":
+     print("Payment for this order has already been received.")
+     return
+    
+    # Prompt for PayNow reference
+  payNowRef = input("Enter Pay Now reference: ")
+    
+    # Update order
+  order["paymentStatus"] = "Received"
+  order["orderStatus"] = "Baking"
+  order["paymentRef"] = payNowRef
+    
+  print("Payment status updated for order", orderId)
+  
+  updateOrderList(orderList)   
+
+def orderStatus(orderList):
+  print("Update an order's status")
+
+  orderId = input("Please input the order Id : ")
+  if orderId not in orderList:
+    print("Error: No order found with ID", orderId)
+  elif orderList[orderId]['paymentStatus'] == 'Pending':
+    print("Error: Payment is still pending for order", orderId)
+  elif orderList[orderId]['orderStatus'] != 'Baking':
+    print("Error: Order", orderId, "is not currently being baked")
+  else:
+    confirm = input("Are you sure you want to mark order " + orderId + " as complete? ('yes' to proceed, type anything to cancel): ")
+    if confirm.lower() == 'yes':
+      orderList[orderId]['orderStatus'] = 'Complete'
+      print("Order", orderId, "has been marked as complete")
+      updateOrderList(orderList)
+    else:
+      print("Order", orderId, "status has not been updated")
+
+def todayOrderList(orderList):
+  print("\nList orders (today)\n")
+  
+  from datetime import date
+    
+  today = str(date.today())
+  print(f"Today's orders ({today}):")
+  print("{:<15} {:<15} {:<15} {:<15} {:<15} {:<15}".format("Order ID", "Payment Status", "Order Status", "Total Payment", "Order Date", "Pay Now Ref"))
+  print("-"*45)
+  for order in orderList:
+      if orderList[order]['date'] == today:
+          orderID = order
+          paymentStatus = orderList[order]['paymentStatus']
+          orderStatus = orderList[order]['orderStatus']
+          totalPayment = orderList[order]['totalPayment']
+          orderDate = orderList[order]['date']
+          payNowRef = orderList[order]['paymentRef']
+          print("{:<15} {:<15} {:<15} ${:<15.2f} {:<15} {:<15}".format(orderID, paymentStatus, orderStatus, totalPayment, orderDate, payNowRef))
+
+def listOrderDetails():
+  orders = {}
+  
+  with open('orderDetails.txt', 'r') as f:
+       lines = f.readlines()
+       
+       for line in lines:
+         details= line.strip().split("~")
+         orderId = details[0]
+         nameAddress = details[1]
+         subtotal = details[2]
+         deliveryFee = details[3]
+         discount = details[4]
+         orderDetails = {}
+         
+         for i in range(5,len(details), 4):
+           code = details[i]
+           name = details[i+1]
+           price = float(details[i+2])
+           quantity = int(details[i+3])
+           orderDetails[code] = {"name": name, "price": price, "quantity": quantity}
+           
+         orders[orderId] = orderDetails
+
+  orderId = input("Enter order Id to look up : ")
+  if orderId not in orders:
+    print("No order with order Id", orderId)
+    return
+
+  print("\nOrder ", orderId, " for ", nameAddress)
+  print('\n{:<20} {:<6} {:<6} {:<6}'.format('Item', 'Price', 'Qty', 'Amount'))
+  print('-'*45)
+  for code, info in orders[orderId].items():
+        name = info["name"]
+        price = float(info["price"])
+        quantity = int(info["quantity"])
+        amount = price * quantity
+        print('{:<20} ${:<6.2f} {:<6} ${:<6.2f}'.format(name, price, quantity, amount))
+
+
+  deliveryFee = float(deliveryFee)
+  subtotal = float(subtotal)
+  discount = float(discount)
+  totalDue = subtotal + deliveryFee - (discount*subtotal/100)
+  print('\n{:>18} : ${:<6}'.format("Subtotal", subtotal))
+  if deliveryFee == 0:
+      print('{:>18} : {:<6}'.format("Delivery", "free"))
+  else:
+      print('{:>18} : ${:<6.2f}'.format("Delivery", deliveryFee))
+  if discount > 0:
+      print('{:>18} : {:<6.2f}%'.format("Discount", discount))
+  print('{:>18} : ${:<6}'.format("Total Due", totalDue))
+#SALES
+
+
+
+#DISCOUNT
+def discountsSetup():
+  print("\nYou are now in the 'Discount Setup' directory \n")
+  with open('discount.txt', 'r') as f:
+       lines = f.readlines()
+  print("{:<20} {:<8}".format("Subtotal", "Discount"))
+  print('-'*45)
+  for line in lines[1:]:
+     subtotal, discount = line.strip().split()
+     subtotal = float(subtotal)
+     discount = float(discount)
+     print('above ${:<15.2f} {:<8.2f}%'.format(subtotal, discount))
+     
+  option = 100
+  while option != 0:
+   print('~' * 45)
+   print("1. Add new Line")
+   print("2. Update Line")
+   print("3. Remove Line")
+   print("4. Update Delivery Fee")
+   print("0. Quit Discount Setup Menu")
+   option = int(input("Enter your option : "))
+  
+   if option == 0:
+     print("Quitting Discount Setup Menu")
+   elif option == 1:
+     createNewDisc('discount.txt')
+   elif option == 2:
+     updateExistingDiscount('discount.txt')
+   elif option == 3:
+     removeDiscount('discount.txt')
+   elif option == 4:
+     changeDeliveryfee(True)
+   else:
+    print("Please enter valid input")
+
+def createNewDisc(discountFile):
+    print("Add New Line")
+    # Read the existing discounts from file
+    with open(discountFile, 'r') as file:
+        lines = file.readlines()
+
+    discounts = {}
+    for line in lines[1:]:  # skip the header
+        items = line.strip().split()
+        subtotal = float(items[0])
+        discountpct = float(items[1])
+        if subtotal in discounts:
+            print(f"Error: Subtotal ${subtotal} already has a discount of {discounts[subtotal]}%")
+            return
+        discounts[subtotal] = float(discountpct)
+
+    # Prompt the user for the new discount
+    newSubtotal = float(input("Enter the subtotal for the new discount (e.g 50 = above $50.00): "))
+    
+    if newSubtotal in discounts:
+      print(f"Error: Subtotal ${newSubtotal} already has a discount of {discounts[newSubtotal]}%")
+      return
+    newDiscountpct = int(input("Enter the discount percentage for the new subtotal (e.g 15 = 15%) :  "))
+    if newDiscountpct < 0 or newDiscountpct > 100:
+        print("Error: Discount percentage must be between 0 and 100")
+        return
+
+    # Check for irregular discount percentages
+    irregular = False
+    for subtotal, discountpct in discounts.items():
+        if newDiscountpct > discountpct and newSubtotal< subtotal:
+          print(f"Warning: New discount percentage {newDiscountpct}% is higher than existing {discountpct}% for ${subtotal}")
+          irregular = True
+        elif newDiscountpct < discountpct and newSubtotal>subtotal:
+          print(f"Warning: New discount percentage {newDiscountpct}% is lower than existing {discountpct}% for ${subtotal}")
+          irregular = True
+          
+
+    # Write the new discount to file
+    if not irregular:
+      with open(discountFile, 'a') as file:
+        file.write(f"\n{newSubtotal} {newDiscountpct}")
+        print(f"New discount for ${newSubtotal} added successfully")
+    elif irregular:
+      print('New Discount is not inserted due to irregularities')
+
+def updateExistingDiscount(discountFile):
+    print("Update Line")
+    with open(discountFile) as f:
+        lines = f.readlines()
+
+    # create a dictionary of the existing discounts
+    discounts = {}
+    for line in lines[1:]:  # skip the header line
+        subtotal, percent = line.split()
+        discounts[float(subtotal)] = float(percent)
+
+    # ask the user which discount to update
+    print("Which discount do you want to update?")
+    for i, (subtotal, percent) in enumerate(discounts.items()):
+        print(f"{i+1}. Above ${subtotal:.2f} => {percent}%")
+    selection = int(input("Enter the number of the discount to update: "))
+
+    # ask the user for the new values
+    oldSubtotal, oldPercent = list(discounts.items())[selection-1]
+    newSubtotal = float(input(f"Enter the new subtotal (currently ${oldSubtotal:.2f})(format e.g 50 for above $50) : "))
+    newPercent = float(input(f"Enter the new discount percentage (currently {oldPercent:.0f}%)(format e.g 10 for 10%): "))
+
+    # check for irregular discount
+    irregular = False
+    for subtotal, percent in discounts.items():
+        if newSubtotal > oldSubtotal and newPercent < percent:
+          print(f"Warning: the new discount of {newPercent}% is lower than the discount of {percent:.0f}% for subtotals above ${subtotal:.2f}")
+          irregular = True
+        elif newSubtotal < oldSubtotal and newPercent > percent:
+          print(f"Warning: the new discount of {newPercent}% is higher than the discount of {percent}% for subtotals above ${subtotal:.2f}")
+          irregular = True
+
+    # update the discount file
+    if not irregular:
+      discounts[newSubtotal] = newPercent
+      with open(discountFile, 'w') as f:
+        f.write("Subtotal Discount")
+        for subtotal, percent in sorted(discounts.items()):
+            f.write(f"\n{subtotal:.2f} {percent:.0f}")
+      print("Discount updated successfully!")
+    elif irregular:
+      print("Discount is not updated due to irregularities")
+      
+def removeDiscount(discountFile):
+    print('-'*45)
+    # read the existing discount data from the file into a list of dictionaries
+    with open(discountFile, 'r') as f:
+        lines = f.readlines()
+    discountData = []
+    for line in lines[1:]:
+        subtotal, discount = line.strip().split()
+        subtotal = float(subtotal)
+        discount = float(subtotal)
+        discountData.append({'subtotal': subtotal, 'discount': discount})
+  
+    # prompt the user for the subtotal of the discount line to remove
+    subtotalToRemove = float(input("Enter the subtotal of the discount line to remove (e.g 20.00 = above $20.00): "))
+  
+    # find the discount line with the matching subtotal
+    matchingDiscountLine = None
+    for discountLine in discountData:
+        if discountLine['subtotal'] == subtotalToRemove:
+            matchingDiscountLine = discountLine
+            break
+            
+    # if a matching discount line was found, remove and update the file
+    if matchingDiscountLine:
+        print(f"Are you sure you want to remove the discount line for {subtotalToRemove}?")
+        confirmation = input("Enter 'yes' to confirm or 'no' to cancel: ")
+        if confirmation.lower() == 'yes':
+            # remove the matching discount line from the list and update the file
+            discountData.remove(matchingDiscountLine)
+            with open(discountFile, 'w') as f:
+                f.write("Subtotal Discount")
+                for discountLine in discountData:
+                    f.write(f"\n{discountLine['subtotal']} {discountLine['discount']}")
+            print(f"The discount line for {subtotalToRemove} has been removed.")
+        else:
+            print("Removal cancelled.")
+    else:
+        print(f"No discount line found for above ${subtotalToRemove}.")
+
+def changeDeliveryfee(change = False):
+  with open('delivery.txt','r') as f:
+    line = f.readline()
+    freeIf, fee = line.split()
+    freeIf = float(freeIf)
+    fee = float(fee)
+    if change:
+      print("\nCurrently delivery fee is free if total above $", freeIf, ", flat $", fee, " otherwise\n")
+      fee = int(input("Input new delivery fee : "))
+      freeIf = int(input("Delivery fee is free if above? "))
+      with open('delivery.txt','w') as f:
+        f.write(f"{freeIf} {fee}")
+        print("Update Succesful")
+  return freeIf, fee
+  
+  
